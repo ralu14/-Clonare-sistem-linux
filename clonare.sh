@@ -24,28 +24,23 @@ else
 	sudo mkdir -p $backup_dir
 fi
 
-echo "Backup pentru utilizatori ..."
-sudo cp /etc/passwd $backup_dir/passwd.bak
-sudo cp /etc/group $backup_dir/group.bak
-sudo cp /etc/shadow $backup_dir/shadow.bak
-sudo cp /etc/gshadow $backup_dir/gshadow.bak
+cd "$backup_dir"
 
-old_ifs=$IFS
-IFS=$'\n'
-set -x
-for line in $( cat /etc/passwd ) 
+#copiere toate fisiere din sistem 
+
+lista_directoare=`ls /`
+echo $lista_directoare
+
+for i in $lista_directoare
 do
-	username=$(cut -f1 -d: <<<$line)
-	echo "$username"
-	home_dir=$(cut -f6 -d: <<<$line)
-	echo "$home_dir"
-	if [[ -d $home_dir ]]
+	if [[ "/""$i" != $backup_dir ]]
 	then
-		sudo tar czf "$backup_dir""/""$username_home_dir_backup.tar.gz" "$home_dir" 2>/dev/null
-		echo "sunt aici"
+		sudo tar czvf "arhiva_""$i"".tar" "/""$i"
 	fi
 done
 
-IFS=$old_ifs
+#copiere pachete instalate pe sistem 
+
+dpkg --get-selections | cut -f1 > installed_packeges.txt
 
 
