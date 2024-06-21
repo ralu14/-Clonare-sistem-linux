@@ -26,21 +26,43 @@ fi
 
 cd "$backup_dir"
 
-#copiere toate fisiere din sistem 
+###########################ATENTIE , TOT CE SE CREEAZA SE SALVEAZA IN NOUL DIRECTOR CREAT backup_dir ##################################
 
-lista_directoare=`ls /`
-echo $lista_directoare
+#copiere utilizatori cu home_dir lor
 
-for i in $lista_directoare
+user_file="user_details.txt"
+shadow_file="shadow_details.txt"
+
+while read line
 do
-	if [[ "/""$i" != $backup_dir ]]
+	user=`cut -f1 -d: <<<$line`
+	if [[ $user != "root" ]]
 	then
-		sudo tar czvf "arhiva_""$i"".tar" "/""$i"
+		shell=`cut -f7 -d: <<<$line`
+		if [[ $shell == "/bin/bash" || $shell == "/bin/sh" ]]
+		then
+			 echo "$line" >> $user_file
+       			pass_user=`sudo egrep "^$user:" /etc/shadow` 
+       			echo "$pass_user" >> $shadow_file
+		fi
 	fi
-done
+done < /etc/passwd
+
+
+old_ifs=$IFS
+IFS=:
+
+while read -r user pass uid gid gecos home shell
+do
+    if [[ -d $home ]]
+    then
+        echo "Copierea directorului home pentru $user..."
+        sudo rsync -a "$home" "$backup_dir"
+    fi
+done < user_details.txt
+
+IFS=$old_ifs
 
 #copiere pachete instalate pe sistem 
 
-dpkg --get-selections | cut -f1 > installed_packeges.txt
-
-
+#dpkg --get-selections | cut -f1 > installed_packeges.txt
