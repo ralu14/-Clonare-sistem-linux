@@ -1,5 +1,5 @@
 #!/bin/bash
-backup_dir='/backup'
+backup_dir="/backup"
 if [[ -d $backup_dir ]]
 then
 	echo -e "Atentie,exista deja directorul /backup \n"
@@ -47,12 +47,10 @@ do
        			pass_user=`sudo egrep "^$user:" /etc/shadow` 
        			echo "$pass_user" >> $shadow_file
        			id_gr_principal=`cut -f4 -d: <<<$line`
-       			grup_principal=`sudo egrep "$id_gr_principal" /etc/group| cut -f1 -d:`
+       			grup_principal=`sudo egrep "$id_gr_principal" /etc/group`
        			if [[ -n $grup_principal ]]
        			then
-       				group_list="$user:""$grup_principal,"
-       			else
-       				group_list="$user:x,"
+       				echo "$grup_principal" >>$group_file
        			fi	
        		
        			while read linie
@@ -60,11 +58,9 @@ do
        				verf=`sudo cut -f4 -d: <<<$linie | egrep "$user"`
        				if [[ -n $verf ]]
        				then
-       					grup=`cut -f1 -d: <<<$linie`
-       					group_list="$group_list""$grup,"
+       					echo "$linie" >>$group_file
        				fi
        			done < /etc/group
-       			echo "$group_list" >> $group_file
 		fi
 	fi
 done < /etc/passwd
@@ -85,45 +81,27 @@ IFS=$old_ifs
 
 #copiere pachete instalate pe sistem 
 
-#dpkg-query -W -f='${binary:Package}\t${Version}\n' > installed_packages.txt
+dpkg-query -W -f='${binary:Package}\t${Version}\n' > installed_packages.txt
 
-#copiere configurari de retea
 
-#network_dir="$backup_dir/network_config"
-#sudo mkdir -p "$network_dir"
-#sudo cp -r /etc/network/* "$network_dir"
-#sudo cp -r /etc/netplan/* "$network_dir"
+# copiere fisiere de configurare de retea
 
-#network_packages=("net-tools" "iproute2" "network-manager" "dhclient" "wpa_supplicant" "iptables")
-#for package in "${network_packages[@]}"
-#do
-#    if dpkg -s $package &> /dev/null
- #   then
- #       dpkg-query -W -f='${binary:Package}\t${Version}\n' $package >> network_packages.txt
-  #  fi
-#done
+network_config_archive="$backup_dir/network_config.tar.gz"
+sudo tar czf "$network_config_archive" /etc/network /etc/netplan /etc/resolv.conf /etc/hosts /etc/nsswitch.conf /etc/hostname /etc/NetworkManager/system-connections
+
+network_packages=("net-tools" "iproute2" "network-manager" "dhclient" "wpa_supplicant" "iptables")
+for package in "${network_packages[@]}"
+do
+    if dpkg -s $package &> /dev/null
+    then
+        dpkg-query -W -f='${binary:Package}\t${Version}\n' $package >> network_packages.txt
+    fi
+done
 
 # copiere versiune kernel
-#uname -r > kernel_version.txt
+uname -r > kernel_version.txt
 
-# identificare si copiere pachete kernel
-
-#kernel_packages_dir="$backup_dir/kernel_packages"
-#mkdir -p "$kernel_packages_dir"
-#kernel_version=$(uname -r)
-
-#dpkg -l | grep "$kernel_version" | awk '{print $2}' | while read package; do
-#    package_file=$(dpkg -L $package | grep -m 1 -E "/var/cache/apt/archives/$package.*.deb")
-#    if [[ -f $package_file ]]; then
-#        cp $package_file "$kernel_packages_dir/"
-#    else
-#        echo "Pachetul $package nu a fost găsit în cache. Încerc descărcarea acestuia."
-#        apt-get download $package -y -o Dir::Cache::Archives="$kernel_packages_dir"
-#    fi
-#done
 
 #copiere fisiere de configurare
 
-#sudo tar czf "$backup_dir/system_backup.tar.gz" --exclude="$backup_dir" --exclude="/dev" --exclude="/proc" --exclude="/sys" --exclude="/tmp" --exclude="/run" --exclude="/mnt" --exclude="/media" --exclude="/lost+found" /
-
-
+sudo tar czf "$backup_dir/system_backup.tar.gz" --exclude="$backup_dir" --exclude="/dev" --exclude="/etc" --exclude="/proc" --exclude="/sys" --exclude="/tmp" --exclude="/run" --exclude="/mnt" --exclude="/media" --exclude="/lost+found" /

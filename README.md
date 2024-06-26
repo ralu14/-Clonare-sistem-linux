@@ -9,6 +9,8 @@ Asta include:
 
 Pentru o intelegere cat mai detaliata a temei abordate m-am folosit de urmatoarele site-uri
     -> https://ro.linux-console.net/?p=10102#gsc.tab=0
+    ->https://www.onworks.net/ro/documentation/introductiontolinux/part207.php
+    ->https://www.scribd.com/document/21981425/Administrarea-Retelelor-Linux
     
 
 ### Planificare si organizare:
