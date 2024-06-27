@@ -1,4 +1,4 @@
-# -Clonare-sistem-linux
+# Clonare-sistem-linux
 18.06.2024: 
 ### Descriere
 Acest proiect simplifica procesul de clonare a unui sistem Linux prin crearea de scripturi care fac diferite task-uri.
