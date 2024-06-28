@@ -120,7 +120,7 @@ tar czf kernel_version.tar.gz kernel_version.txt
 # Copiere fisiere de configurare
 
 echo "Copiere fisiere de configurare ..."
-#sudo tar czf "$backup_dir/system_backup.tar.gz" --exclude="$backup_dir" --exclude="/dev" --exclude="/proc" --exclude="/sys" --exclude="/tmp" --exclude="/run" --exclude="/mnt" --exclude="/media" --exclude="/lost+found" / 2>/dev/null
+sudo tar czf system_backup.tar.gz --exclude="$backup_dir" --exclude="/dev" --exclude="/proc" --exclude="/sys" --exclude="/tmp" --exclude="/run" --exclude="/mnt" --exclude="/media" --exclude="/lost+found" / 2>/dev/null
 
 echo "Terminare clonare si creare director de backup ..."
 
@@ -128,7 +128,7 @@ echo "Terminare clonare si creare director de backup ..."
 
 user="$1"
 new_backup="/media/$user/1EF5-657F/"
-sudo mv "$backup_dir" "$new_backup" 2>/dev/null
+find "$backup_dir" -type f -name "*.tar.gz" -exec mv {} "$new_backup" \; 2>/dev/null
 
 nume_director=`basename $backup_dir`
 echo "Backup-ul a fost mutat la $new_backup$nume_director"

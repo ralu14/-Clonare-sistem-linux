@@ -10,6 +10,40 @@ fi
 
 cd $backup_dir
 
+# Restaurare versiune kernel
+kernel_version_file="$backup_dir/kernel_version.txt"
+tar xzf "$backup_dir/kernel_version.tar.gz" -C "$backup_dir" --no-same-owner
+
+# Comparam versiunea de kernel si facem upgrade daca este necesar
+
+echo "Compararea versiunii de kernel..."
+current_kernel_version=$(uname -r)
+backup_kernel_version=$(cat "$kernel_version_file")
+
+if [ "$current_kernel_version" != "$backup_kernel_version" ]; then
+    echo "Versiunea de kernel difera. Se va face schimbarea de la $current_kernel_version la $backup_kernel_version."
+    
+    current_major_version=$(echo $current_kernel_version | cut -d'-' -f1)
+    backup_major_version=$(echo $backup_kernel_version | cut -d'-' -f1)
+    
+    if [ "$current_major_version" -gt "$backup_major_version" ]; then
+        echo "Kernel-ul curent este mai nou. Se va face downgrade."
+    else
+        echo "Kernel-ul curent este mai vechi. Se va face upgrade."
+    fi
+
+    sudo apt-get update
+    sudo apt-get install -y linux-image-$backup_kernel_version linux-headers-$backup_kernel_version
+    sudo update-grub
+    echo "Kernel-ul a fost actualizat. Sistemul va fi restartat pentru a încărca noul kernel."
+    sudo reboot
+else
+    echo "Kernel-ul este deja la versiunea specificată: $current_kernel_version."
+fi
+
+echo "Restaurarea sistemului a fost completă."
+
+
 system_backup_archive="$backup_dir/system_backup.tar.gz"
 
 # Restauram sistemul de fisiere din arhiva
@@ -17,6 +51,55 @@ system_backup_archive="$backup_dir/system_backup.tar.gz"
 echo "Restaurarea sistemului de fisiere..."
 sudo tar xzf "$system_backup_archive" -C / 2>/dev/null
 echo "Restaurarea sistemului de fisiere este completa."
+
+
+# Restauram configurarile de retea
+network_config_archive="$backup_dir/network_config.tar.gz"
+network_packages_file="$backup_dir/network_packages.txt"
+
+sudo tar xzf "$network_config_archive" -C / 2>/dev/null
+
+echo "Configurarile de retea au fost restaurate."
+
+# Instalam pachetele de retea specifice din network_packages.txt
+tar xzf "$backup_dir/network_packages.tar.gz" -C "$backup_dir" --no-same-owner
+
+while IFS=$'\t' read -r package version
+do
+    echo "Instalare pachet de retea $package versiunea $version"
+    sudo apt-get install -y "$package=$version"
+done < "$network_packages_file"
+
+echo "Pachetele de retea au fost instalate."
+
+# Instalam pachetele de sistem din installed_packages.txt
+installed_packages_file="$backup_dir/installed_packages.txt"
+failed_packages_file="$backup_dir/failed_packages.txt"
+
+install_package() {
+    local package=$1
+    local version=$2
+
+    echo "Instalare $package versiunea $version"
+    if [[ ! sudo apt-get install -y "$package=$version" ]]
+    then
+        echo "$package $version" >> "$failed_packages_file"
+    fi
+}
+
+# instalam pachetele din fisierul installed_packeges.txt
+while IFS=$'\t' read -r package version
+ do
+    install_package "$package" "$version"
+done < "$installed_packages_file"
+
+if [[ -s "$failed_packages_file" ]]
+ then
+    echo "Urmatoarele pachete nu au putut fi instalate nici dupa reincercare:"
+    cat "$failed_packages_file"
+else
+    echo "Toate pachetele de sistem au fost reinstalate cu versiunile specifice."
+fi
 
 
 # Cream utilizatorii, grupurile si configuram parolele lor
@@ -91,60 +174,3 @@ done < $user_file
 
 echo "Utilizatorii au fost creati cu succes pe noul sistem."
 echo "Restaurarea directoarelor home a fost completa."
-
-# Instalam pachetele de sistem din installed_packages.txt
-installed_packages_file="$backup_dir/installed_packages.txt"
-
-echo "Instalare pachete de sistem..."
-tar xzf "$backup_dir/installed_packages.tar.gz" -C "$backup_dir" --no-same-owner
-
-while IFS=$'\t' read -r package version
-do
-    echo "Instalare $package versiunea $version"
-    #sudo apt-get install -y "$package=$version"
-done < "$installed_packages_file"
-
-echo "Toate pachetele de sistem au fost reinstalate cu versiunile specifice."
-
-# Restauram configurarile de retea
-network_config_archive="$backup_dir/network_config.tar.gz"
-network_packages_file="$backup_dir/network_packages.txt"
-
-sudo tar xzf "$network_config_archive" -C / 2>/dev/null
-
-echo "Configurarile de retea au fost restaurate."
-
-# Instalam pachetele de retea specifice din network_packages.txt
-#tar xzf "$backup_dir/network_packages.tar.gz" -C "$backup_dir" --no-same-owner
-
-while IFS=$'\t' read -r package version
-do
-    echo "Instalare pachet de retea $package versiunea $version"
-    sudo apt-get install -y "$package=$version"
-done < "$network_packages_file"
-
-echo "Pachetele de retea au fost instalate."
-
-# Restaurare versiune kernel
-kernel_version_file="$backup_dir/kernel_version.txt"
-tar xzf "$backup_dir/kernel_version.tar.gz" -C "$backup_dir" --no-same-owner
-
-# Comparam versiunea de kernel si facem upgrade daca este necesar
-
-echo "Compararea versiunii de kernel..."
-current_kernel_version=$(uname -r)
-backup_kernel_version=$(cat "$kernel_version_file")
-
-if [ "$current_kernel_version" != "$backup_kernel_version" ]
-then
-    echo "Versiunea de kernel difera. Se va face upgrade de la $current_kernel_version la $backup_kernel_version."
-    #sudo apt-get update
-    #sudo apt-get install -y linux-image-$backup_kernel_version linux-headers-$backup_kernel_version
-    #sudo update-grub
-    echo "Kernel-ul a fost actualizat. Sistemul va fi restartat pentru a încarca noul kernel."
-    #sudo reboot
-else
-    echo "Kernel-ul este deja la versiunea specificata: $current_kernel_version."
-fi
-
-echo "Restaurarea sistemului a fost completă."
